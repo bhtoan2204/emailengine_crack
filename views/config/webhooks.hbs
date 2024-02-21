@@ -1,0 +1,368 @@
+<div class="d-sm-flex align-items-center justify-content-between mb-1">
+    <h1 class="h3 mb-0 text-gray-800">
+
+        <small><i class="fas fa-cog fa-fw"></i></small>
+
+        Webhooks
+
+        {{#if values.webhooksEnabled}}
+
+        <span class="badge badge-success">enabled</span>
+
+        {{else}}
+
+        <span class="badge badge-warning">disabled</span>
+
+        {{/if}}
+
+    </h1>
+</div>
+
+<p class="mb-4">Webhooks allow EmailEngine to notify you about changes on registered email accounts.</p>
+
+{{#if values.webhooksEnabled}}
+{{#if webhookErrorFlag}}
+<div class="mt-3 mb-3 alert clear-alert-btn alert-danger" data-clear-alert="webhook-default">
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+    </button>
+
+    <p><strong>NB!</strong> The last attempted webhook failed with the response below.</p>
+    <hr>
+    <p class="mb-0">
+        <code>
+            {{webhookErrorFlag.message}}
+        </code>
+    </p>
+</div>
+{{/if}}
+{{/if}}
+
+<form method="post" action="/admin/config/webhooks">
+    <input type="hidden" name="crumb" id="crumb" value="{{crumb}}" />
+
+    <div class="card">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">General settings</h6>
+        </div>
+        <div class="card-body">
+            <div class="form-group form-check">
+                <div class="text-muted float-right code-link">[<a href="/admin/iframe/docs#/Settings/postV1Settings"
+                        target="_blank">webhooksEnabled</a>]
+                </div>
+
+                <input type="checkbox" class="form-check-input {{#if errors.webhooksEnabled}}is-invalid{{/if}}"
+                    id="webhooks_enabled" name="webhooksEnabled" {{#if values.webhooksEnabled}}checked{{/if}} />
+                <label class="form-check-label" for="webhooks_enabled">Enable webhooks</label>
+                {{#if errors.webhooksEnabled}}
+                <span class="invalid-feedback">{{errors.webhooksEnabled}}</span>
+                {{/if}}
+                <small class="form-text text-muted">If enabled, EmailEngine makes POST requests with a JSON payload
+                    against all matching webhook targets.</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">Default webhook</h6>
+            <div class="dropdown no-arrow">
+                <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown"
+                    aria-haspopup="true" aria-expanded="false">
+                    <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
+                </a>
+                <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in"
+                    aria-labelledby="dropdownMenuLink">
+                    <div class="dropdown-header">Webhook actions:</div>
+                    <a class="dropdown-item webhooks-status" href="#" id="test-payload-btn">
+                        <i class="fas fa-cloud-upload-alt fa-sm"></i> <span>Send test webhook</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body">
+            <div class="form-group">
+                <div class="text-muted float-right code-link">[<a href="/admin/iframe/docs#/Settings/postV1Settings"
+                        target="_blank">webhooks</a>]
+                </div>
+
+                <label for="settingsWebhooks">Webhook URL</label>
+
+                <input type="url" class="form-control or-else-all {{#if errors.webhooks}}is-invalid{{/if}}"
+                    data-target="webhooks-status" id="settingsWebhooks" name="webhooks"
+                    placeholder="URL like &quot;https://myservice.com/imap/webhooks&quot;"
+                    value="{{values.webhooks}}" />
+
+                {{#if errors.webhooks}}
+                <span class="invalid-feedback">{{errors.webhooks}}</span>
+                {{/if}}
+                <small class="form-text text-muted">This is the default webhook target that matches all events selected
+                    below. Each account can have its specific webhook URL set; in that case, the default webhook URL is
+                    ignored for such an account, and the account-specific URL is used instead. Leave it empty to
+                    disable.</small>
+            </div>
+
+            <p>Select the event types you want to receive webhook notifications for. You should avoid selecting all the
+                events if you have a lot of accounts registered, or you might fill the event queue in memory.</p>
+
+            <div class="form-group form-check">
+                <div class="text-muted float-right code-link">[<a href="/admin/iframe/docs#/Settings/postV1Settings"
+                        target="_blank">webhookEvents</a>="*"]
+                </div>
+
+                <input type="checkbox" class="form-check-input or-else-all {{#if errors.notifyAll}}is-invalid{{/if}}"
+                    data-target="event-type" id="notifyAll" name="notifyAll" {{#if values.notifyAll}}checked{{/if}} />
+                <label class="form-check-label" for="notifyAll">All
+                    events</label>
+                {{#if errors.notifyAll}}
+                <span class="invalid-feedback">{{errors.notifyAll}}</span>
+                {{/if}}
+            </div>
+
+            <div class="form-group form-check">
+                {{#each notificationTypes}}
+                <div>
+                    <div class="text-muted float-right code-link">[<a href="/admin/iframe/docs#/Settings/postV1Settings"
+                            target="_blank">webhookEvents</a>="{{name}}"]
+                    </div>
+                    <input type="checkbox" class="form-check-input event-type {{#if error}}is-invalid{{/if}}"
+                        id="notify_{{name}}" name="notify_{{name}}" {{#if checked}}checked{{/if}}>
+                    <label class="form-check-label" for="notify_{{name}}"
+                        title="&quot;{{name}}&quot;">{{description}}</label>
+                    {{#if error}}<span class="invalid-feedback">{{error}}</span>{{/if}}
+                </div>
+
+                {{#if isMessageNew}}
+
+                <div style="padding-left: 20px;">
+                    <div class="text-muted float-right code-link">[<a href="/admin/iframe/docs#/Settings/postV1Settings"
+                            target="_blank">inboxNewOnly</a>]
+                    </div>
+                    <input type="checkbox" class="form-check-input {{#if error}}is-invalid{{/if}}" id="inboxNewOnly"
+                        name="inboxNewOnly" {{#if ../values.inboxNewOnly}}checked{{/if}}>
+                    <label class="form-check-label" for="inboxNewOnly">Send "New Email" notifications about incoming
+                        emails
+                        only</label>
+                    {{#if ../errors.inboxNewOnly}}
+                    <span class="invalid-feedback">{{../errors.inboxNewOnly}}</span>
+                    {{/if}}
+                </div>
+
+                {{/if}}
+                {{/each}}
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <a href="#customHeadersBlock"
+            class="d-block card-header py-3 {{#unless values.customHeaders}} collapsed{{/unless}}"
+            data-toggle="collapse" role="button" aria-expanded="true" aria-controls="customHeadersBlock">
+
+            <h6 class="m-0 font-weight-bold text-primary">Custom request headers <small class="text-muted"> &mdash;
+                    applies
+                    to default webhooks only</small></h6>
+
+        </a>
+        <div class="collapse {{#if values.customHeaders}} show{{/if}}" id="customHeadersBlock">
+            <div class="card-body">
+
+                <p>Here you can list additional request headers to be passed with each webhook request.</p>
+
+                <div class="form-group">
+                    <div class="text-muted float-right code-link">[<a href="/admin/iframe/docs#/Settings/postV1Settings"
+                            target="_blank">webhooksCustomHeaders</a>]
+                    </div>
+
+                    <label for="customHeaders">List of custom headers</label>
+
+                    <textarea class="form-control text-monospace {{#if errors.customHeaders}}is-invalid{{/if}}"
+                        id="customHeaders" name="customHeaders" rows="5" spellcheck="false"
+                        data-enable-grammarly="false"
+                        placeholder="Custom headers like &quot;Authorization: Bearer secret_token&quot;&mldr;">{{values.customHeaders}}</textarea>
+                    {{#if errors.customHeaders}}
+                    <span class="invalid-feedback">{{errors.customHeaders}}</span>
+                    {{/if}}
+                    <small class="form-text text-muted">Keep one header per line</small>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Email headers to include in the payload
+                <small class="text-muted"> &mdash; applies to all
+                    webhooks, including <a href="/admin/webhooks">routed</a> webhooks</small>
+            </h6>
+        </div>
+        <div class="card-body">
+
+            <p>By default, EmailEngine includes envelope-specific data like sender and recipient addresses or Message-ID
+                values in the webhook payload. If needed, you can configure EmailEngine to include the contents of other
+                header keys of a new email as well.</p>
+
+            <div class="form-group form-check">
+                <div class="text-muted float-right code-link">[<a href="/admin/iframe/docs#/Settings/postV1Settings"
+                        target="_blank">notifyHeaders</a>="*"]
+                </div>
+                <input type="checkbox" class="form-check-input or-else-all {{#if errors.headersAll}}is-invalid{{/if}}"
+                    data-target="header-list" id="headers_all" name="headersAll" {{#if
+                    values.headersAll}}checked{{/if}} />
+                <label class="form-check-label" for="headers_all">All Headers</label>
+                {{#if errors.headersAll}}
+                <span class="invalid-feedback">{{errors.headersAll}}</span>
+                {{/if}}
+            </div>
+
+            <div class="form-group">
+                <div class="text-muted float-right code-link">[<a href="/admin/iframe/docs#/Settings/postV1Settings"
+                        target="_blank">notifyHeaders</a>]
+                </div>
+                <label for="settingsNotifyHeaders">Selected headers</label>
+                <textarea class="form-control header-list {{#if errors.notifyHeaders}}is-invalid{{/if}}"
+                    id="settingsNotifyHeaders" name="notifyHeaders" rows="3" data-enable-grammarly="false"
+                    spellcheck="false"
+                    placeholder="For example &quot;MIME-Version&quot;">{{values.notifyHeaders}}</textarea>
+                {{#if errors.notifyHeaders}}
+                <span class="invalid-feedback">{{errors.notifyHeaders}}</span>
+                {{/if}}
+                <small class="form-text text-muted">Enter one header key per line. Leave empty to not include headers in
+                    the webhook.</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-4 mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Text content<small class="text-muted"> &mdash; applies to all
+                    webhooks, including <a href="/admin/webhooks">routed</a> webhooks</small>
+            </h6>
+
+        </div>
+        <div class="card-body">
+
+            <p>By default, only message metadata without any text content is included in the webhook payload for new
+                emails. If needed, you can configure EmailEngine to include plaintext and HTML content in the
+                payload as well.</p>
+
+            <div class="form-group form-check">
+                <div class="text-muted float-right code-link">[<a href="/admin/iframe/docs#/Settings/postV1Settings"
+                        target="_blank">notifyText</a>]
+                </div>
+                <input type="checkbox" class="form-check-input or-else-all {{#if errors.notifyText}}is-invalid{{/if}}"
+                    data-target="text-list" data-reverse="true" id="settingsNotifyText" name="notifyText" {{#if
+                    values.notifyText}}checked{{/if}} />
+                <label class="form-check-label" for="settingsNotifyText">Include text content in new email
+                    webhooks</label>
+                {{#if errors.notifyText}}
+                <span class="invalid-feedback">{{errors.notifyText}}</span>
+                {{/if}}
+            </div>
+
+            <div class="form-group form-check">
+                <div class="text-muted float-right code-link">[<a href="/admin/iframe/docs#/Settings/postV1Settings"
+                        target="_blank">notifyWebSafeHtml</a>]
+                </div>
+                <input type="checkbox"
+                    class="form-check-input text-list {{#if errors.notifyWebSafeHtml}}is-invalid{{/if}}"
+                    id="settingsNotifyWebSafeHtml" name="notifyWebSafeHtml" {{#if
+                    values.notifyWebSafeHtml}}checked{{/if}} />
+                <label class="form-check-label" for="settingsNotifyWebSafeHtml">Pre-process HTML to make it
+                    web-safe</label>
+                {{#if errors.notifyWebSafeHtml}}
+                <span class="invalid-feedback">{{errors.notifyWebSafeHtml}}</span>
+                {{/if}}
+                <small class="form-text text-muted">If enabled, then EmailEngine applies the <code>webSafeHtml</code>
+                    pre-processing for the HTML content. The processed HTML content can be included on web pages as
+                    inline HTML. If the email does not have the HTML content set, then EmailEngine generates the HTML
+                    from plaintext
+                    content.</small>
+            </div>
+
+            <div class="form-group">
+                <div class="text-muted float-right code-link">[<a href="/admin/iframe/docs#/Settings/postV1Settings"
+                        target="_blank">notifyTextSize</a>]
+                </div>
+                <label for="settingsNotifyTextSize">Maximum text size</label>
+                <input type="number" class="form-control text-list {{#if errors.notifyTextSize}}is-invalid{{/if}}"
+                    id="settingsNotifyTextSize" min="0" name="notifyTextSize" value="{{values.notifyTextSize}}" />
+                {{#if errors.notifyTextSize}}
+                <span class="invalid-feedback">{{errors.notifyTextSize}}</span>
+                {{/if}}
+                <small class="form-text text-muted">To keep webhook size with text values in check, you can define
+                    the
+                    maximum text size limit. Longer texts are cropped to fit that size. This limit is applied per
+                    text
+                    type, so if the limit is 1000 bytes and email has both plaintext and HTML content, you get 1000
+                    bytes of plaintext and 1000 bytes of HTML.</small>
+            </div>
+
+            <div class="form-group form-check">
+                <div class="text-muted float-right code-link">[<a href="/admin/iframe/docs#/Settings/postV1Settings"
+                        target="_blank">notifyCalendarEvents</a>]
+                </div>
+                <input type="checkbox" class="form-check-input {{#if errors.notifyCalendarEvents}}is-invalid{{/if}}"
+                    data-target="text-list" id="settingsnotifyCalendarEvents" name="notifyCalendarEvents" {{#if
+                    values.notifyCalendarEvents}}checked{{/if}} />
+                <label class="form-check-label" for="settingsnotifyCalendarEvents">Include calendar events in new email
+                    webhooks</label>
+                {{#if errors.notifyCalendarEvents}}
+                <span class="invalid-feedback">{{errors.notifyCalendarEvents}}</span>
+                {{/if}}
+                <small class="form-text text-muted">If enabled, then EmailEngine will scan incoming emails for calendar
+                    attachments, and if such an attachment is found, then parses it and includes the basic details and
+                    the calendar file itself in base64 encoding as part of the <code>calendarEvents</code> array in the
+                    <code>messageNew</code> webhook payload.</small>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="mb-4">
+        <button type="submit" class="btn btn-primary btn-icon-split">
+            <span class="icon text-white-50">
+                <i class="fas fa-cog"></i>
+            </span>
+            <span class="text">Update settings</span>
+        </button>
+    </div>
+
+</form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+        const sendTestPayload = async () => {
+            const webhooks = document.getElementById('settingsWebhooks').value.trim();
+            const customHeaders = document.getElementById('customHeaders').value.trim();
+
+            const res = await fetch('/admin/config/webhooks/test', {
+                method: 'post',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                    crumb: document.getElementById('crumb').value,
+                    webhooks,
+                    customHeaders
+                })
+            })
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            const data = await res.json();
+
+            return data;
+        }
+
+        document.getElementById('test-payload-btn').addEventListener('click', e => {
+            e.preventDefault()
+            sendTestPayload().then(data => {
+                showToast(data.error ? data.error : (data.success ? 'Test payload sent' : 'Failed to send payload'), data.success ? 'check-circle' : 'alert-triangle');
+            }).catch(err => {
+                showToast('Request failed\n' + err.message, 'alert-triangle');
+            })
+        });
+    })
+</script>
